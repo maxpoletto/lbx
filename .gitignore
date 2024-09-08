@@ -1,0 +1,6 @@
+MODULE.bazel
+MODULE.bazel.lock
+bazel-bin
+bazel-lbx
+bazel-out
+bazel-testlogs
