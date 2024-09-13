@@ -45,6 +45,13 @@ func ParseCollectionMetadata(data []byte) (*CollectionMetadata, error) {
 	if err := checkCommonMetadata(&cm.CommonMetadata); err != nil {
 		return nil, err
 	}
+	// Set some site-wide defaults.
+	if len(cm.Filter) == 0 {
+		cm.Filter = []string{"include:.*"}
+	}
+	if cm.SortOrder == "" {
+		cm.SortOrder = "taken"
+	}
 	return &cm, nil
 }
 
@@ -71,19 +78,15 @@ func ParseAlbumMetadata(data []byte, album bool) (*AlbumMetadata, error) {
 	return &am, nil
 }
 
-// checkCommonMetadata checks the format of and sets defaults for common metadata fields.
+// checkCommonMetadata checks the format of shared metadata fields.
 func checkCommonMetadata(cm *CommonMetadata) error {
 	// Set / check sort order.
 	switch cm.SortOrder {
-	case "":
-		cm.SortOrder = "taken"
-	case "taken", "taken:reverse", "name", "name:reverse", "mtime", "mtime:reverse":
+	case "", "taken", "taken:reverse", "name", "name:reverse", "mtime", "mtime:reverse":
+		// Empty sort order is allowed to support inheritance.
+		// It is set to "taken" only in the collection metadata.
 	default:
 		return fmt.Errorf("invalid sort order %s", cm.SortOrder)
-	}
-	// Set filter if not set.
-	if len(cm.Filter) == 0 {
-		cm.Filter = []string{"include:.*"}
 	}
 	// Check that filter entries have the form "include:FILE" or "exclude:FILE".
 	for _, entry := range cm.Filter {

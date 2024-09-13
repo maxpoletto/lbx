@@ -52,7 +52,7 @@ func TestMerge(t *testing.T) {
 					Tags:      []string{"tag1", "tag2"},
 					SortOrder: "name",
 					Access:    []string{"user1", "user2"},
-					Filter:    []string{"exclude:.*", "include:.*"},
+					Filter:    []string{"include:.*", "exclude:.*"},
 				},
 				Title:          "Album1",
 				TitlePhoto:     "photo1.jpg",
