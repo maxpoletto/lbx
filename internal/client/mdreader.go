@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 )
 
 func containsFilename(s1 []string, s2 string) bool {
@@ -46,6 +47,13 @@ func ReadMetadata(root string) ([]*AlbumMetadata, error) {
 		}
 		mdList = append(mdList, mdl...)
 	}
+	// Sort the list of albums by relative path.
+	for _, md := range mdList {
+		md.Path, _ = filepath.Rel(root, md.Path)
+	}
+	sort.Slice(mdList, func(i, j int) bool {
+		return mdList[i].Path < mdList[j].Path
+	})
 	return mdList, nil
 }
 
@@ -85,6 +93,7 @@ func recursivelyReadMetadata(path string, mdParent *AlbumMetadata) ([]*AlbumMeta
 	// Merge metadata, implementing inheritance rules.
 	mdCur.merge(mdParent)
 	if isAlbum {
+		mdCur.Path = path
 		return []*AlbumMetadata{mdCur}, nil
 	}
 

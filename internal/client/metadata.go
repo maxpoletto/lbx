@@ -1,7 +1,9 @@
 // metadata represents metadata for an LBX photo collection.
 package metadata
 
-import "sort"
+import (
+	"sort"
+)
 
 // CommonMetadata represents metadata that applies to multiple levels
 // of the LBX photo directory hierarchy.
@@ -25,8 +27,8 @@ type CommonMetadata struct {
 	// are uploaded for display by LBX.
 	// Each entry has the form: "include:FILE" or "exclude:FILE". FILE is a filename or a regexp.
 	// Default is ["include:.*"].
-	// Filters accumulate from parent to child and are evaluated sequentially. First rule
-	// to match wins. If no rule matches, photo is not included.
+	// Filters are evaluated sequentially starting with the album directory and moving out.
+	// First rule to match wins. If no rule matches, photo is not included.
 	Filter []string `json:"filter"`
 }
 
@@ -71,18 +73,20 @@ type AlbumMetadata struct {
 	// "FILENAME:[LANG:]CAPTION". FILENAME is a photo filename, LANG is an
 	// optional language code, and CAPTION is the caption.
 	Captions []string `json:"captions"`
+	// Path is the path of the album relative to the collection root.
+	Path string
 }
 
 // merge merges the receiver metadata with the given metadata. The receiver
 // is downstream (further nested in the directory hierarchy) from the given metadata.
 func (m *AlbumMetadata) merge(other *AlbumMetadata) {
 	m.Enabled = m.Enabled && other.Enabled
-	m.Tags = append(m.Tags, other.Tags...)
+	m.Tags = mergeLists(m.Tags, other.Tags)
 	if m.SortOrder == "" {
 		m.SortOrder = other.SortOrder
 	}
 	m.Access = mergeLists(m.Access, other.Access)
-	m.Filter = append(other.Filter, m.Filter...)
+	m.Filter = append(m.Filter, other.Filter...)
 }
 
 // mergeLists merges two lists of strings, unifying any duplicates and sorting the result.
