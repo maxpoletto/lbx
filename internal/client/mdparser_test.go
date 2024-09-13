@@ -1,4 +1,4 @@
-package mdparser
+package metadata
 
 import (
 	"testing"
@@ -19,7 +19,8 @@ func TestParseCollectionMetadata(t *testing.T) {
 				"url": "https://example.com/photos",
 				"s3_access_code": "ACCESSCODE123",
 				"s3_secret_key": "SECRETKEY123",
-				"max_size": 1024
+				"max_size": 1024,
+				"filter": ["include:.*"]
 			}`,
 			wantErr: false,
 			want: &CollectionMetadata{
@@ -31,7 +32,7 @@ func TestParseCollectionMetadata(t *testing.T) {
 				MaxSize:      1024,
 				CommonMetadata: CommonMetadata{
 					SortOrder: "taken",
-					Include:   []string{".*"},
+					Filter:    []string{"include:.*"},
 				},
 			},
 		},
@@ -101,7 +102,8 @@ func TestParseCollectionMetadata(t *testing.T) {
 				"s3_access_code": "ACCESSCODE123",
 				"s3_secret_key": "SECRETKEY123",
 				"max_size": 1024,
-				"sort_order": "name"
+				"sort_order": "name",
+				"filter": ["include:.*"]
 			}`,
 			wantErr: false,
 			want: &CollectionMetadata{
@@ -113,7 +115,7 @@ func TestParseCollectionMetadata(t *testing.T) {
 				MaxSize:      1024,
 				CommonMetadata: CommonMetadata{
 					SortOrder: "name",
-					Include:   []string{".*"},
+					Filter:    []string{"include:.*"},
 				},
 			},
 		},
@@ -126,12 +128,13 @@ func TestParseCollectionMetadata(t *testing.T) {
 				"s3_access_code": "ACCESSCODE123",
 				"s3_secret_key": "SECRETKEY123",
 				"max_size": 1024,
-				"sort_order": "invalid_sort_order"
+				"sort_order": "invalid_sort_order",
+				"filter": ["include:.*"]
 			}`,
 			wantErr: true,
 		},
 		{
-			name: "Valid include",
+			name: "Valid filter",
 			input: `{
 				"version": "1",
 				"name": "My Collection",
@@ -139,7 +142,7 @@ func TestParseCollectionMetadata(t *testing.T) {
 				"s3_access_code": "ACCESSCODE123",
 				"s3_secret_key": "SECRETKEY123",
 				"max_size": 1024,
-				"include": ["*.jpg", "*.png"]
+				"filter": ["include:*.jpg", "exclude:*.png"]
 			}`,
 			wantErr: false,
 			want: &CollectionMetadata{
@@ -151,12 +154,12 @@ func TestParseCollectionMetadata(t *testing.T) {
 				MaxSize:      1024,
 				CommonMetadata: CommonMetadata{
 					SortOrder: "taken",
-					Include:   []string{"*.jpg", "*.png"},
+					Filter:    []string{"include:*.jpg", "exclude:*.png"},
 				},
 			},
 		},
 		{
-			name: "Empty include",
+			name: "Empty filter",
 			input: `{
 				"version": "1",
 				"name": "My Collection",
@@ -164,7 +167,7 @@ func TestParseCollectionMetadata(t *testing.T) {
 				"s3_access_code": "ACCESSCODE123",
 				"s3_secret_key": "SECRETKEY123",
 				"max_size": 1024,
-				"include": []
+				"filter": []
 			}`,
 			wantErr: false,
 			want: &CollectionMetadata{
@@ -176,21 +179,21 @@ func TestParseCollectionMetadata(t *testing.T) {
 				MaxSize:      1024,
 				CommonMetadata: CommonMetadata{
 					SortOrder: "taken",
-					Include:   []string{".*"},
+					Filter:    []string{"include:.*"},
 				},
 			},
 		},
 	}
 
-	for i, tt := range tests {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ParseCollectionMetadata([]byte(tt.input))
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseCollectionMetadata(%v) error = %v, wantErr %v", i, err, tt.wantErr)
+				t.Errorf("ParseCollectionMetadata() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && !compareCollectionMetadata(got, tt.want) {
-				t.Errorf("ParseCollectionMetadata(%v) = %v, want %v", i, got, tt.want)
+				t.Errorf("ParseCollectionMetadata() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -204,11 +207,11 @@ func compareCollectionMetadata(got, want *CollectionMetadata) bool {
 		got.S3SecretKey != want.S3SecretKey ||
 		got.MaxSize != want.MaxSize ||
 		got.SortOrder != want.SortOrder ||
-		len(got.Include) != len(want.Include) {
+		len(got.Filter) != len(want.Filter) {
 		return false
 	}
-	for i := range got.Include {
-		if got.Include[i] != want.Include[i] {
+	for i := range got.Filter {
+		if got.Filter[i] != want.Filter[i] {
 			return false
 		}
 	}
@@ -285,15 +288,15 @@ func TestParseAlbumMetadata(t *testing.T) {
 		},
 	}
 
-	for i, tt := range tests {
+	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := ParseAlbumMetadata([]byte(tt.input), tt.album)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseAlbumMetadata(%v) error = %v, wantErr %v", i, err, tt.wantErr)
+				t.Errorf("ParseAlbumMetadata() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && !compareAlbumMetadata(got, tt.want) {
-				t.Errorf("ParseAlbumMetadata(%v) = %v, want %v", i, got, tt.want)
+				t.Errorf("ParseAlbumMetadata() = %v, want %v", got, tt.want)
 			}
 		})
 	}
