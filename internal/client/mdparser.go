@@ -104,6 +104,39 @@ func ParseCollectionMetadata(data []byte) (*CollectionMetadata, error) {
 	if cm.MaxSize < 0 {
 		return nil, fmt.Errorf("invalid max size")
 	}
+	// Check sort order. If nil, set default to "taken".
+	switch cm.SortOrder {
+	case "":
+		cm.SortOrder = "taken"
+	case "name", "name:reverse", "mtime", "mtime:reverse", "taken", "taken:reverse":
+		// Valid sort order.
+	default:
+		return nil, fmt.Errorf("invalid sort order %q", cm.SortOrder)
+	}
+	// Check include. If nil, set default to ".*".
+	if len(cm.Include) == 0 {
+		cm.Include = []string{".*"}
+	}
 
 	return &cm, nil
+}
+
+// ParseAlbumMetadata parses the metadata of an LBX photo album or intermediate directory.
+// If album is true, metadata corresponds to an album (media directory).
+func ParseAlbumMetadata(data []byte, album bool) (*AlbumMetadata, error) {
+	var am AlbumMetadata
+	if err := json.Unmarshal(data, &am); err != nil {
+		return nil, err
+	}
+	// Title must be set iff album is true.
+	if !album && am.Title != "" {
+		return nil, fmt.Errorf("title can only be set in an album folder")
+	} else if album && am.Title == "" {
+		return nil, fmt.Errorf("require album title")
+	}
+	// TitlePhoto, HighlightPhoto, Aliases, Titles, and Captions can only be set in an album folder.
+	if !album && (am.TitlePhoto != "" || am.HighlightPhoto != "" || len(am.Aliases) > 0 || len(am.Titles) > 0 || len(am.Captions) > 0) {
+		return nil, fmt.Errorf("title photo, highlight photo, aliases, titles, and captions can only be set in an album folder")
+	}
+	return &am, nil
 }
