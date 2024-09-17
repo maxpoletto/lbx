@@ -9,6 +9,13 @@ go_binary(
 )
 
 go_binary(
+    name = "dbinit",
+    srcs = ["cmd/server/dbinit.go"],
+    visibility = ["//visibility:public"],
+    deps = ["@@com_github_mattn_go_sqlite3//:go_default_library"],
+)
+
+go_binary(
     name = "lbx",
     srcs = ["cmd/cli/main.go"],
     visibility = ["//visibility:public"],
