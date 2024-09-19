@@ -4,13 +4,13 @@ load("@io_bazel_rules_go//go:def.bzl", "go_test")
 
 go_binary(
     name = "lbxd",
-    srcs = ["cmd/server/main.go"],
+    srcs = ["cmd/server/lbxd/main.go"],
     visibility = ["//visibility:public"],
 )
 
 go_binary(
     name = "dbinit",
-    srcs = ["cmd/server/dbinit.go"],
+    srcs = ["cmd/server/dbinit/main.go"],
     visibility = ["//visibility:public"],
     deps = ["@@com_github_mattn_go_sqlite3//:go_default_library"],
 )
