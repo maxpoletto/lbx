@@ -7,10 +7,6 @@ import (
 	"sort"
 )
 
-func containsFilename(s1 []string, s2 string) bool {
-	return true
-}
-
 // ReadMetadata reads the medata of an LBX photo collection, recursively traversing
 // the directory structure and parsing metadata files. Returns an error if the metadata
 // cannot be read or is invalid, or otherwise a flat list of AlbumMetadata objects, one
