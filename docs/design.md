@@ -1,24 +1,38 @@
 # LBX System Design
 
-Based on https://docs.google.com/document/d/1Q9d3oFLbcTekokmQVq36I7wa5-BDsalr-LKfdyHTWWI/edit?tab=t.0#heading=h.vnjd78whj79n and written by Claude Opus 4.6.
+Based on
+https://docs.google.com/document/d/1Q9d3oFLbcTekokmQVq36I7wa5-BDsalr-LKfdyHTWWI/edit?tab=t.0#heading=h.vnjd78whj79n
+and originally written by Claude Opus 4.6.
 
 ## What LBX is
 
-LBX is self-hosted software for displaying photos and videos online. It serves as a durable, low-maintenance alternative to services like Smugmug and Photobucket — a "forever home" for a personal or family media collection.
+LBX is self-hosted software for displaying photos and videos online. It serves
+as a durable, low-maintenance alternative to services like Smugmug and
+Photobucket — a "forever home" for a personal or family media collection.
 
-A single owner manages content from a local filesystem (the "master" copy, e.g., Lightroom exports). A CLI tool syncs that content to a server, which serves it to viewers over the web.
+A single owner manages content from a local filesystem (the "master" copy, e.g.,
+Lightroom exports). A CLI tool syncs that content to a server, which serves it
+to viewers over the web.
 
 ## Design goals
 
-**Durability.** Easy to set up, easy to migrate, minimal ongoing maintenance. The cost of running LBX should approach the cost of storage alone. Stable, user-defined URLs that don't break when the system is moved.
+**Durability.** Easy to set up, easy to migrate, minimal ongoing maintenance.
+The cost of running LBX should approach the cost of storage alone. Stable,
+user-defined URLs that don't break when the system is moved.
 
-**Simplicity.** Minimal dependencies. Go + SQLite + an S3-compatible store (or a local filesystem). Pure Javascript front-end, no frameworks.
+**Simplicity.** Minimal dependencies. Go + SQLite + an S3-compatible store (or a
+local filesystem). Pure Javascript front-end, no frameworks.
 
-**File-based workflow.** The owner organizes media in a directory tree and describes it with JSON manifest files. The directory tree is the source of truth. The server is a read-optimized projection of that truth.
+**File-based workflow.** The owner organizes media in a directory tree and
+describes it with JSON manifest files. The directory tree is the source of
+truth. The server is a read-optimized projection of that truth.
 
-**Beauty.** Clean, responsive viewing experience. The system gets out of the way of the photos.
+**Beauty.** Clean, responsive viewing experience. The system gets out of the way
+of the photos.
 
-**Single-user, single-instance.** One owner, one site. Multi-tenancy is explicitly out of scope — it changes every decision (auth, storage, isolation, admin) and is a separate design effort if ever needed.
+**Single-user, single-instance.** One owner, one site. Multi-tenancy is
+explicitly out of scope — it changes every decision (auth, storage, isolation,
+admin) and is a separate design effort if ever needed.
 
 ---
 
@@ -41,9 +55,15 @@ A single owner manages content from a local filesystem (the "master" copy, e.g.,
 
 Three components:
 
-1. **Master filesystem** — the owner's local directory tree. Contains media files and `manifest.json` files that describe metadata, access control, and structure. This is the canonical source of truth.
-2. **`lbx` CLI** — runs on the owner's machine. Reads the master filesystem, syncs metadata and media to the server. All write operations flow through this tool.
-3. **`lbxd` server** — serves content to viewers. Read-only from the viewer's perspective. Stores metadata in SQLite and media blobs in an S3-compatible store or local filesystem.
+1. **Master filesystem** — the owner's local directory treeq. Contains media
+   files and `manifest.json` files that describe metadata, access control, and
+   structure. This is the canonical source of truth.
+2. **`lbx` CLI** — runs on the owner's machine. Reads the master filesystem,
+   syncs metadata and media to the server. All write operations flow through
+   this tool.
+3. **`lbxd` server** — serves content to viewers. Read-only from the viewer's
+   perspective. Stores metadata in SQLite and media blobs in an S3-compatible
+   store or local filesystem.
 
 ---
 
@@ -51,7 +71,9 @@ Three components:
 
 ### Directory structure
 
-The photo library is a directory tree. Each directory contains either subdirectories or media files, never both. Media directories are leaves of the tree; each leaf is an **album**.
+The photo library is a directory tree. Each directory contains either
+subdirectories or media files, never both. Media directories are leaves of the
+tree; each leaf is an **album**.
 
 ```
 photos/                          # collection root
@@ -74,7 +96,10 @@ photos/                          # collection root
 
 ### Manifest inheritance
 
-Every manifest file is a JSON object. Fields defined in a parent directory's manifest apply to all descendants unless overridden. The collection root manifest is required; intermediate directory manifests are optional; album (leaf) manifests are required.
+Every manifest file is a JSON object. Fields defined in a parent directory's
+manifest apply to all descendants unless overridden. The collection root
+manifest is required; intermediate directory manifests are optional; album
+(leaf) manifests are required.
 
 The inheritance rules vary by field:
 
@@ -87,7 +112,8 @@ The inheritance rules vary by field:
 | `access` | Independent per level | Access keys are scoped to the level they're declared on. |
 | `filter` | Concatenate (child rules first) | First matching rule wins. Root default `include:.*` acts as catch-all. |
 
-Fields marked with `*` below may only appear in album manifests; all others may appear at any level.
+Fields marked with `*` below may only appear in album manifests; all others may
+appear at any level.
 
 ### Collection manifest (root)
 
@@ -105,7 +131,10 @@ Fields marked with `*` below may only appear in album manifests; all others may 
 }
 ```
 
-Storage credentials (S3 keys, filesystem paths) are **not** in the manifest. They are configured via environment variables (`LBX_S3_ACCESS_KEY_ID`, `LBX_S3_SECRET_ACCESS_KEY`, `LBX_S3_BUCKET`, `LBX_S3_REGION`) or a separate `.lbx-credentials` file that is `.gitignore`d by default and never synced to the server. The server has its own credential source.
+Storage credentials (S3 keys, filesystem paths) are **not** in the manifest.
+They are configured via environment variables (`LBX_S3_ACCESS_KEY_ID`,
+`LBX_S3_SECRET_ACCESS_KEY`, `LBX_S3_BUCKET`, `LBX_S3_REGION`) or a separate
+`~/.config/lbx/credentials` file. The server has its own credential source.
 
 ### Album manifest
 
@@ -129,9 +158,13 @@ Storage credentials (S3 keys, filesystem paths) are **not** in the manifest. The
 
 ### Filter rules
 
-Filters determine which media files in a directory are included for display. Each rule is a string of the form `include:GLOB` or `exclude:GLOB`, where GLOB is a standard glob pattern (not a regexp — globs are sufficient for filename matching and much harder to get wrong).
+Filters determine which media files in a directory are included for display.
+Each rule is a string of the form `include:GLOB` or `exclude:GLOB`, where GLOB
+is a standard glob pattern (not a regexp — globs are sufficient for filename
+matching and much harder to get wrong).
 
-Rules are evaluated in order, child-first then parent. First match wins. The root manifest's default `include:.*` serves as the final catch-all.
+Rules are evaluated in order, child-first then parent. First match wins. The
+root manifest's default `include:.*` serves as the final catch-all.
 
 Examples:
 
@@ -146,31 +179,41 @@ Examples:
 
 ### Naming: `manifest.json`
 
-The canonical filename is `manifest.json` everywhere — collection root, intermediate directories, and album leaves.
+The canonical filename is `manifest.json` everywhere — collection root,
+intermediate directories, and album leaves.
 
 ---
 
 ## Access Control and Authentication
 
-LBX has two distinct authentication concerns with different threat models and mechanisms.
+LBX has two distinct authentication concerns with different threat models and
+mechanisms.
 
 ### Admin authentication (owner → server)
 
-The owner authenticates to the server for all write operations (sync, metadata updates, administration). This uses a **server API key**: a high-entropy random token shared between the CLI and the server.
+The owner authenticates to the server for all write operations (sync, metadata
+updates, administration). This uses a **server API key**: a high-entropy random
+token shared between the CLI and the server.
 
-- Generated during `lbx init` and stored locally (e.g., `~/.config/lbx/credentials`).
+- Generated during `lbx init` and stored locally (e.g.,
+  `~/.config/lbx/credentials`).
 - Configured on the server via environment variable (`LBX_API_KEY`).
-- Transmitted in every CLI→server request as `Authorization: Bearer <key>` over TLS.
-- One key per LBX instance. Rotation is a manual operation (generate new key, update both sides).
+- Transmitted in every CLI→server request as `Authorization: Bearer <key>` over
+  TLS.
+- One key per LBX instance. Rotation is a manual operation (generate new key,
+  update both sides).
 
-The API key is never stored in `manifest.json`, never synced, never backed up alongside content.
+The API key is never stored in `manifest.json`, never synced, never backed up
+alongside content.
 
 ### Viewer access control (viewer → server)
 
-Viewer access is controlled at two levels: **folders** and **albums**. Each has an independent `visibility` setting: `public` or `private`.
+Viewer access is controlled at two levels: **folders** and **albums**. Each has
+an independent `visibility` setting: `public` or `private`.
 
 - **Public** content is visible to anyone.
-- **Private** content requires an **access key** — an opaque token presented as a URL query parameter or stored in a session cookie after first use.
+- **Private** content requires an **access key** — an opaque token presented as
+  a URL query parameter or stored in a session cookie after first use.
 
 The two levels compose simply:
 
@@ -181,9 +224,14 @@ The two levels compose simply:
 | private | public | Folder listing requires the folder's access key. Once provided, all public albums within are visible. |
 | private | private | Folder key required to see the listing; album key required to view the album contents. |
 
-This is a genuine two-step concentric model: the server checks folder access first, then album access. No ambiguity, no merge logic, no three-way join.
+This is a genuine two-step concentric model: the server checks folder access
+first, then album access. No ambiguity, no merge logic, no three-way join.
 
-**Per-media access control is not supported.** If a specific photo needs restricted access, put it in its own album. This eliminates the complexity of per-row ACLs on what could be hundreds of thousands of media records, and keeps the access model something a human can reason about by looking at the directory tree.
+**Per-media access control is not supported.** If a specific photo needs
+restricted access, put it in its own album. This eliminates the complexity of
+per-row ACLs on what could be hundreds of thousands of media records, and keeps
+the access model something a human can reason about by looking at the directory
+tree.
 
 ### Access keys
 
@@ -198,23 +246,37 @@ CREATE TABLE access_keys (
 );
 ```
 
-Access keys are generated by the CLI (`lbx access create`), stored in the manifest (the `access` array), and synced to the server. They can optionally expire. The server updates `last_used_at` on use, enabling the owner to identify stale keys.
+Access keys are generated by the CLI (`lbx access create`), stored in the
+manifest (the `access` array), and synced to the server. They can optionally
+expire. The server updates `last_used_at` on use, enabling the owner to identify
+stale keys.
 
-A share link looks like: `https://photos.example.com/trips/2024-norway?key=<token>`
+A share link looks like:
+`https://photos.example.com/trips/2024-norway?key=<token>`
 
-On first use, the server sets a session cookie so the viewer doesn't need to re-present the key on every request within that album. The key in the URL is the canonical mechanism; the cookie is a UX convenience.
+On first use, the server sets a session cookie so the viewer doesn't need to
+re-present the key on every request within that album. The key in the URL is the
+canonical mechanism; the cookie is a UX convenience.
 
 ### Media URL privacy
 
-Media served through the normal album viewing flow inherits the album's access check — if you can't see the album, you can't see its photos.
+Media served through the normal album viewing flow inherits the album's access
+check — if you can't see the album, you can't see its photos.
 
-For direct media URLs (e.g., embedding a photo in a blog post), each media item has a system-generated **public ID**: a random, unguessable, URL-safe token (128-bit, base62-encoded). This replaces sequential integer IDs in public-facing URLs. A direct media URL looks like:
+For direct media URLs (e.g., embedding a photo in a blog post), each media item
+has a system-generated **public ID**: a random, unguessable, URL-safe token
+(128-bit, base62-encoded). This replaces sequential integer IDs in public-facing
+URLs. A direct media URL looks like:
 
 ```
 https://photos.example.com/_/m/<public_id>?size=L
 ```
 
-This is the "unlisted YouTube video" model: security through unguessability, not per-request access checks. It is simple, CDN-friendly, and appropriate for a personal photo site. The trade-off is explicit: a leaked URL is a leaked photo. If stronger guarantees are needed in the future, the server can add a token check on this endpoint without changing the URL structure.
+This is the "unlisted YouTube video" model: security through unguessability, not
+per-request access checks. It is simple, CDN-friendly, and appropriate for a
+personal photo site. The trade-off is explicit: a leaked URL is a leaked photo.
+If stronger guarantees are needed in the future, the server can add a token
+check on this endpoint without changing the URL structure.
 
 ---
 
@@ -242,7 +304,8 @@ User content gets the clean namespace. System endpoints live under the `/_/` pre
 /_/c/<content_hash>                    # media by content hash (stable across renames)
 ```
 
-This avoids any collision between user-created folder names and system paths. A folder named `admin` or `api` works fine because system paths are prefixed.
+This avoids any collision between user-created folder names and system paths. A
+folder named `admin` or `api` works fine because system paths are prefixed.
 
 ### Path resolution
 
@@ -250,35 +313,50 @@ When the server receives a request for `/<path>`:
 
 1. Look up `<path>` as a folder path. If found, serve the folder listing.
 2. Look up `<path>` as an album path. If found, serve the album.
-3. Look up `<path>` as an album alias. If found, redirect or serve the aliased album.
-4. If `<path>` has the form `<prefix>/<leaf>`, look up `<prefix>` as an album (or alias) and `<leaf>` as a media display name within that album. If found, serve the photo page.
+3. Look up `<path>` as an album alias. If found, redirect or serve the aliased
+   album.
+4. If `<path>` has the form `<prefix>/<leaf>`, look up `<prefix>` as an album
+   (or alias) and `<leaf>` as a media display name within that album. If found,
+   serve the photo page.
 5. 404.
 
-Real paths always take priority over aliases (step 2 before step 3). This is the simplest resolution model and prevents aliases from shadowing real content.
+Real paths always take priority over aliases (step 2 before step 3). This is the
+simplest resolution model and prevents aliases from shadowing real content.
 
 ### Size and format
 
-Representation variants (size, format) are specified as query parameters, not path segments:
+Representation variants (size, format) are specified as query parameters, not
+path segments:
 
 | Parameter | Values | Default |
 |---|---|---|
 | `size` | `thumb`, `small`, `medium`, `large`, `original` | `large` |
 | `fmt` | `jpeg`, `webp`, `avif` | server decides based on `Accept` header |
 
-Named sizes map to maximum pixel dimensions configured at the site level. Using named sizes rather than arbitrary pixel values keeps the set of generated variants bounded and cacheable.
+Named sizes map to maximum pixel dimensions configured at the site level. Using
+named sizes rather than arbitrary pixel values keeps the set of generated
+variants bounded and cacheable.
 
 ---
 
 ## Alias System
 
-Aliases provide stable, user-friendly alternative paths to albums. They are defined in album manifests and must be globally unique across the site.
+Aliases provide stable, user-friendly alternative paths to albums. They are
+defined in album manifests and must be globally unique across the site.
 
 ### Rules
 
-1. **Aliases are album-only.** Folder aliases are not supported. If needed in the future, a `folder_aliases` table with identical structure can be added. Omitting folder aliases now keeps the feature simple and well-defined.
-2. **Aliases are terminal.** An alias resolves to exactly one album. Appending further path segments to an alias (e.g., `/my-alias/photo-name`) resolves via the standard "album + media name" logic in step 4 of path resolution.
-3. **Real paths take priority.** If an alias collides with a real folder or album path, the real path wins. The alias is effectively shadowed. The `lbx sync` command warns when this happens.
-4. **Uniqueness is enforced at sync time.** Duplicate aliases across albums are rejected. The error surfaces during `lbx sync`, not silently at serving time.
+1. **Aliases are album-only.** Folder aliases are not supported. If needed in
+   the future, a `folder_aliases` table with identical structure can be added.
+   Omitting folder aliases now keeps the feature simple and well-defined.
+2. **Aliases are terminal.** An alias resolves to exactly one album. Appending
+   further path segments to an alias (e.g., `/my-alias/photo-name`) resolves via
+   the standard "album + media name" logic in step 4 of path resolution.
+3. **Real paths take priority.** If an alias collides with a real folder or
+   album path, the real path wins. The alias is effectively shadowed. The `lbx
+   sync` command warns when this happens.
+4. **Uniqueness is enforced at sync time.** Duplicate aliases across albums are
+   rejected. The error surfaces during `lbx sync`, not silently at serving time.
 
 ### Schema
 
@@ -294,7 +372,8 @@ CREATE TABLE album_aliases (
 
 ## Database Schema
 
-SQLite. Single file. Backed up by copying the file (or using SQLite's backup API).
+SQLite. Single file. Backed up by copying the file (or using SQLite's backup
+API).
 
 ### Site (singleton)
 
@@ -357,11 +436,13 @@ CREATE TABLE album_text (
     album_id INTEGER NOT NULL,
     lang TEXT NOT NULL DEFAULT 'en',
     title TEXT NOT NULL,
-    blurb TEXT,                        -- short text; long-form goes in readme.md
     PRIMARY KEY(album_id, lang),
     FOREIGN KEY(album_id) REFERENCES albums(id) ON DELETE CASCADE
 );
 ```
+
+Optionally, text to accompany the album can be stored in readme.md in the album
+directory on the local filesystem.
 
 ### Media
 
@@ -424,9 +505,16 @@ CREATE TABLE blobs (
 CREATE INDEX blobs_media_id_dim ON blobs(media_id, max_dim);
 ```
 
-The `storage_path` is an opaque string interpreted by the configured storage backend. For S3: `s3://bucket-name/object-key`. For local filesystem: a relative path from the configured media root. Migrating between storage types is a matter of rewriting `storage_path` values and moving the files — no schema change needed.
+The `storage_path` is an opaque string interpreted by the configured storage
+backend. For S3: `s3://bucket-name/object-key`. For local filesystem: a relative
+path from the configured media root. Migrating between storage types is a matter
+of rewriting `storage_path` values and moving the files — no schema change
+needed.
 
 ### Tags
+
+Tags are flat strings and not hierarchical. Hierarchy can be build in by
+convention (e.g., travel-2024-norway).
 
 ```sql
 CREATE TABLE tags (
@@ -480,7 +568,11 @@ CREATE TABLE album_access (
 );
 ```
 
-No `media_access` table. Per-media ACLs are not supported (see Access Control section).
+No `media_access` table. Per-media ACLs are not supported (see Access Control
+section).
+
+Access by content hash is also not access controlled: we treat the hashes as
+effectively unguessable, even though they are deterministic.
 
 ### Full-text search
 
@@ -498,7 +590,8 @@ CREATE VIRTUAL TABLE media_fts USING fts5(
 );
 ```
 
-FTS5 (not FTS4) with external content tables to avoid duplicating data. Triggers on the source tables keep the FTS index in sync.
+FTS5 (not FTS4) with external content tables to avoid duplicating data. Triggers
+on the source tables keep the FTS index in sync.
 
 ### View statistics
 
@@ -520,32 +613,46 @@ CREATE INDEX view_log_entity ON view_log(entity_type, entity_id, viewed_at);
 
 ### Overview
 
-The sync protocol is designed around the principle that the master filesystem is the source of truth. The server never modifies its own state except in response to a sync operation from the CLI.
+The sync protocol is designed around the principle that the master filesystem is
+the source of truth. The server never modifies its own state except in response
+to a sync operation from the CLI.
 
-All sync requests are authenticated with the admin API key (`Authorization: Bearer <key>`) over TLS.
+All sync requests are authenticated with the admin API key (`Authorization:
+Bearer <key>`) over TLS.
 
 ### Sync negotiation
 
 When `lbx sync` runs:
 
 1. **Client** computes a content hash of each `manifest.json` in the tree.
-2. **Client** sends the set of `(directory_path, manifest_hash)` pairs to the server.
-3. **Server** compares against stored `manifest_hash` values (on `albums` and a corresponding field on `folders`). Returns the list of paths where hashes differ or are missing.
+2. **Client** sends the set of `(directory_path, manifest_hash)` pairs to the
+   server.
+3. **Server** compares against stored `manifest_hash` values (on `albums` and a
+   corresponding field on `folders`). Returns the list of paths where hashes
+   differ or are missing.
 4. **Client** sends full manifests and media file lists for changed directories.
-5. For each changed directory, **client** sends `(filename, content_hash, mtime)` for each media file. **Server** returns the subset of files it doesn't already have (by content hash).
-6. **Client** uploads missing media files. Each upload is individually transactional (the file either fully lands or doesn't). Album-level sync is not atomic, to allow progress on slow connections.
+5. For each changed directory, **client** sends `(filename, content_hash,
+   mtime)` for each media file. **Server** returns the subset of files it
+   doesn't already have (by content hash).
+6. **Client** uploads missing media files. Each upload is individually
+   transactional (the file either fully lands or doesn't). Album-level sync is
+   not atomic, to allow progress on slow connections.
 7. **Client** sends updated metadata for changed albums/folders.
 8. **Server** acknowledges completion and returns a sync counter.
 
-The client stores the sync counter locally. On subsequent syncs, it can send the counter to the server, which responds with "everything changed since counter N" — enabling fast incremental syncs without re-hashing the entire tree.
+The client stores the sync counter locally. On subsequent syncs, it can send the
+counter to the server, which responds with "everything changed since counter N"
+— enabling fast incremental syncs without re-hashing the entire tree.
 
 ### Deletions
 
 When a directory or media file is removed from the master filesystem:
 - The client detects its absence during tree traversal.
 - The client explicitly tells the server to delete it.
-- The server soft-deletes (or hard-deletes with CASCADE) the corresponding records.
-- Blob storage cleanup (deleting actual media files from S3/disk) can happen asynchronously.
+- The server soft-deletes (or hard-deletes with CASCADE) the corresponding
+  records.
+- Blob storage cleanup (deleting actual media files from S3/disk) can happen
+  asynchronously.
 
 ### API endpoints
 
@@ -566,7 +673,8 @@ All request/response bodies are JSON except media uploads (multipart form data).
 
 ## CLI
 
-The CLI is the owner's interface to LBX. It reads the master filesystem and communicates with the server.
+The CLI is the owner's interface to LBX. It reads the master filesystem and
+communicates with the server.
 
 ```
 lbx init                              # interactive setup; generates API key, creates root manifest
@@ -607,28 +715,27 @@ On upload, the server generates multiple resolutions of each media file:
 | `large` | 2400px | Full-screen / high-DPI |
 | `original` | as-uploaded | Download (subject to `max_size` limit) |
 
-If the site's `max_size` is set, the `original` variant is capped at that dimension. The raw uploaded file is stored but never served beyond the configured limit.
+If the site's `max_size` is set, the `original` variant is capped at that
+dimension. The raw uploaded file is stored but never served beyond the
+configured limit.
 
-EXIF data is extracted during processing and stored in the `media` table. EXIF orientation is applied to generated variants (they are always stored in display orientation).
+EXIF data is extracted during processing and stored in the `media` table. EXIF
+orientation is applied to generated variants (they are always stored in display
+orientation).
 
 ### Video
 
-Video support is limited to storage and thumbnail extraction in v1. Full video transcoding (HLS/DASH, multiple qualities) is deferred. The schema supports `media_type = 1` (video) and the blob table can store video variants, but the processing pipeline, playback UI, and video-specific metadata (duration, codec) are future work.
+Video support is limited to storage and thumbnail extraction in v1. Full video
+transcoding (HLS/DASH, multiple qualities) is deferred. The schema supports
+`media_type = 1` (video) and the blob table can store video variants, but the
+processing pipeline, playback UI, and video-specific metadata (duration, codec)
+are future work.
 
 ---
 
 ## Search-Engine Privacy
 
-All server responses include `X-Robots-Tag: noindex, nofollow`. The server serves a `robots.txt` at the site root that disallows all crawlers. HTML pages include `<meta name="robots" content="noindex">`. This is not configurable — LBX is for private collections, not public galleries.
-
----
-
-## Open Questions
-
-1. **Album description: manifest field or readme.md?** Currently the design supports both `album_text.blurb` in the database (synced from manifest) and a `readme.md` file (Markdown, richer formatting). Do we need both, or should `readme.md` be the sole mechanism for album descriptions?
-
-2. **Content-hash URLs.** The `/_/c/<content_hash>` endpoint provides stable URLs across renames and re-organizations. Should these be access-controlled (check the album the media belongs to) or unguessable-only (the hash itself is the credential)? Content hashes are deterministic, so they're not unguessable in the same way `public_id` tokens are.
-
-3. **Tag hierarchy.** Tags are currently flat strings. Is hierarchical tagging (e.g., `travel/europe/norway`) needed? Flat tags with conventions (`travel-europe-norway`) are simpler and can be promoted to hierarchical later if needed.
-
-4. **Folder aliases.** Explicitly deferred. If the use case for cross-referencing subtrees (e.g., `family/hikes/2024-norway` and `2024/norway-trip` where both are folders containing multiple albums) proves common, folder aliases can be added with an identical mechanism to album aliases.
+All server responses include `X-Robots-Tag: noindex, nofollow`. The server
+serves a `robots.txt` at the site root that disallows all crawlers. HTML pages
+include `<meta name="robots" content="noindex">`. This is not configurable — LBX
+is for private collections, not public galleries.
