@@ -12,7 +12,7 @@ A single owner manages content from a local filesystem (the "master" copy, e.g.,
 
 **Durability.** Easy to set up, easy to migrate, minimal ongoing maintenance. The cost of running LBX should approach the cost of storage alone. Stable, user-defined URLs that don't break when the system is moved.
 
-**Simplicity.** Minimal dependencies. Go + SQLite + an S3-compatible store (or a local filesystem). No message queues, no caches, no background workers beyond the sync process itself.
+**Simplicity.** Minimal dependencies. Go + SQLite + an S3-compatible store (or a local filesystem). Pure Javascript front-end, no frameworks.
 
 **File-based workflow.** The owner organizes media in a directory tree and describes it with JSON manifest files. The directory tree is the source of truth. The server is a read-optimized projection of that truth.
 
@@ -141,7 +141,7 @@ Examples:
 // Root default include:.* catches everything else
 
 // Only include .jpg and .png
-["exclude:*", "include:*.jpg", "include:*.png"]
+["include:*.jpg", "include:*.png", "exclude:*"]
 ```
 
 ### Naming: `manifest.json`
